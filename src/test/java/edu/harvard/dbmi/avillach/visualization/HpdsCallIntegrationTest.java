@@ -226,76 +226,41 @@ class HpdsCallIntegrationTest {
     @Test
     void distributions_open_callsHpdsAndReturnsObfuscatedChart()
         throws Exception {
-        // Simulate HPDS open response with obfuscation markers (string values)
         Map<String, Map<String, String>> hpdsResponse = new LinkedHashMap<>();
         hpdsResponse.put(
             "\\demographics\\race\\",
-            new LinkedHashMap<>(
-                Map.of("White", "45000±3", "Black", "12000", "Other", "< 10")
-            )
+            new LinkedHashMap<>(Map.of("White", "45000 ±3", "Black", "12000", "Other", "< 10"))
         );
 
         mockServer
             .expect(requestTo("http://localhost:9999/mock-hpds/query/sync"))
             .andExpect(method(HttpMethod.POST))
-            .andRespond(
-                withSuccess(
-                    objectMapper.writeValueAsString(hpdsResponse),
-                    MediaType.APPLICATION_JSON
-                )
-            );
+            .andRespond(withSuccess(objectMapper.writeValueAsString(hpdsResponse), MediaType.APPLICATION_JSON));
 
         Map<String, Object> query = Map.of(
             "phenotypicClause",
-            Map.of(
-                "phenotypicFilterType",
-                "FILTER",
-                "conceptPath",
-                "\\demographics\\race\\",
-                "values",
-                List.of("White")
-            ),
-            "select",
-            List.of(),
-            "authorizationFilters",
-            List.of(),
-            "genomicFilters",
-            List.of()
+            Map.of("phenotypicFilterType", "FILTER", "conceptPath", "\\demographics\\race\\", "values", List.of("White")),
+            "select", List.of(),
+            "authorizationFilters", List.of(),
+            "genomicFilters", List.of()
         );
-        String body = objectMapper.writeValueAsString(
-            Map.of("hpdsResourceUUID", OPEN_UUID, "query", query)
-        );
+        String body = objectMapper.writeValueAsString(Map.of("hpdsResourceUUID", OPEN_UUID, "query", query));
 
-        MvcResult result = mockMvc
-            .perform(
-                post("/distributions")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(body)
-            )
-            .andExpect(status().isOk())
-            .andReturn();
+        MvcResult result = mockMvc.perform(
+            post("/distributions").contentType(MediaType.APPLICATION_JSON).content(body)
+        ).andExpect(status().isOk()).andReturn();
 
         mockServer.verify();
 
         VisualizationResponse response = objectMapper.readValue(
-            result.getResponse().getContentAsString(),
-            VisualizationResponse.class
+            result.getResponse().getContentAsString(), VisualizationResponse.class
         );
         assertFalse(response.categoricalData().isEmpty());
         assertTrue(response.categoricalData().get(0).obfuscated());
-
-        // Verify obfuscation markers were cleaned
-        // "< 10" should have become "9", "45000±3" should have become "45000"
-        assertTrue(
-            response.categoricalData().get(0).categoricalMap().containsValue("9")
-        );
-        assertTrue(
-            response
-                .categoricalData()
-                .get(0)
-                .categoricalMap()
-                .containsValue("45000")
-        );
+        Map<String, String> race = response.categoricalData().get(0).categoricalMap();
+        assertEquals("45000 ±3", race.get("White"));
+        assertEquals("12000", race.get("Black"));
+        assertEquals("< 10", race.get("Other"));
     }
 
     @Test
