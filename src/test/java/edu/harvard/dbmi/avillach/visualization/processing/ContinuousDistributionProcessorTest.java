@@ -15,24 +15,18 @@ class ContinuousDistributionProcessorTest {
 
     @BeforeEach
     void setUp() {
-        processor = new ContinuousDistributionProcessor(new BinningService());
+        processor = new ContinuousDistributionProcessor();
     }
 
     @Test
-    void process_preBinnedData_returnsContinuousDistribution() {
-        Map<String, Integer> binnedValues = new LinkedHashMap<>();
-        binnedValues.put("18.0 - 24.0", 600);
-        binnedValues.put("24.0 - 30.0", 700);
-        binnedValues.put("30.0 +", 150);
-
-        Map<String, Map<String, Integer>> data = new LinkedHashMap<>();
-        data.put("\\measurements\\bmi\\", binnedValues);
-
-        List<ContinuousDistributionData> result = processor.process(
-            data,
-            false,
-            false
+    void process_preBinnedStrings_returnsContinuousDistribution() {
+        Map<String, Map<String, String>> data = new LinkedHashMap<>();
+        data.put(
+            "\\measurements\\bmi\\",
+            new LinkedHashMap<>(Map.of("18.0 - 24.0", "600", "24.0 - 30.0", "700", "30.0 +", "150"))
         );
+
+        List<ContinuousDistributionData> result = processor.process(data, false);
 
         assertEquals(1, result.size());
         ContinuousDistributionData distribution = result.get(0);
@@ -40,86 +34,33 @@ class ContinuousDistributionProcessorTest {
         assertEquals("measurements: bmi", distribution.title());
         assertTrue(distribution.continuous());
         assertFalse(distribution.obfuscated());
-        assertEquals(
-            List.of("18.0 - 24.0", "24.0 - 30.0", "30.0 +"),
-            List.copyOf(distribution.continuousMap().keySet())
-        );
-        assertEquals(
-            1450,
-            distribution
-                .continuousMap()
-                .values()
-                .stream()
-                .mapToInt(Integer::intValue)
-                .sum()
-        );
+        assertEquals("600", distribution.continuousMap().get("18.0 - 24.0"));
     }
 
     @Test
-    void process_binsRawDataWhenRequested() {
-        Map<String, Integer> rawValues = new LinkedHashMap<>();
-        rawValues.put("18.0", 100);
-        rawValues.put("22.0", 200);
-        rawValues.put("26.0", 150);
-        rawValues.put("30.0", 100);
-        rawValues.put("35.0", 50);
-
-        Map<String, Map<String, Integer>> data = new LinkedHashMap<>();
-        data.put("\\measurements\\bmi\\", rawValues);
-
-        List<ContinuousDistributionData> result = processor.process(
-            data,
-            false,
-            true
+    void process_obfuscatedStrings_passedThroughUnchanged() {
+        Map<String, Map<String, String>> data = new LinkedHashMap<>();
+        data.put(
+            "\\measurements\\bmi\\",
+            new LinkedHashMap<>(Map.of("18.0 - 22.0", "500 ±3", "22.0 - 26.0", "< 10"))
         );
 
-        Map<String, Integer> binnedBmi = result.get(0).continuousMap();
-        assertFalse(binnedBmi.containsKey("18.0"));
-        assertEquals(
-            600,
-            binnedBmi.values().stream().mapToInt(Integer::intValue).sum()
-        );
-    }
-
-    @Test
-    void process_obfuscatedData_setsFlag() {
-        Map<String, Integer> preBinned = new LinkedHashMap<>();
-        preBinned.put("18.0 - 22.0", 500);
-        preBinned.put("22.0 - 26.0", 450);
-        preBinned.put("26.0 +", 250);
-
-        Map<String, Map<String, Integer>> data = new LinkedHashMap<>();
-        data.put("\\measurements\\bmi\\", preBinned);
-
-        List<ContinuousDistributionData> result = processor.process(
-            data,
-            true,
-            false
-        );
+        List<ContinuousDistributionData> result = processor.process(data, true);
 
         assertEquals(1, result.size());
         assertTrue(result.get(0).obfuscated());
-        assertEquals(
-            List.of("18.0 - 22.0", "22.0 - 26.0", "26.0 +"),
-            List.copyOf(result.get(0).continuousMap().keySet())
-        );
+        assertEquals("500 ±3", result.get(0).continuousMap().get("18.0 - 22.0"));
+        assertEquals("< 10", result.get(0).continuousMap().get("22.0 - 26.0"));
     }
 
     @Test
     void process_skipsConsentKeysAndEmptySeries() {
-        Map<String, Map<String, Integer>> data = new LinkedHashMap<>();
-        data.put("\\_consents\\", Map.of("1.0", 100));
+        Map<String, Map<String, String>> data = new LinkedHashMap<>();
+        data.put("\\_consents\\", Map.of("1.0", "100"));
         data.put("\\empty\\", Map.of());
-        data.put(
-            "\\measurements\\bmi\\",
-            new LinkedHashMap<>(Map.of("25.0", 100))
-        );
+        data.put("\\measurements\\bmi\\", new LinkedHashMap<>(Map.of("25.0", "100")));
 
-        List<ContinuousDistributionData> result = processor.process(
-            data,
-            false,
-            false
-        );
+        List<ContinuousDistributionData> result = processor.process(data, false);
 
         assertEquals(1, result.size());
     }

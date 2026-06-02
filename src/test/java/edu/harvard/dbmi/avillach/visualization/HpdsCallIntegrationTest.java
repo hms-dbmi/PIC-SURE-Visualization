@@ -218,7 +218,7 @@ class HpdsCallIntegrationTest {
             .continuousMap()
             .values()
             .stream()
-            .mapToInt(Integer::intValue)
+            .mapToInt(Integer::parseInt)
             .sum();
         assertEquals(600, total);
     }
@@ -285,16 +285,16 @@ class HpdsCallIntegrationTest {
         assertTrue(response.categoricalData().get(0).obfuscated());
 
         // Verify obfuscation markers were cleaned
-        // "< 10" should have become 9, "45000±3" should have become 45000
+        // "< 10" should have become "9", "45000±3" should have become "45000"
         assertTrue(
-            response.categoricalData().get(0).categoricalMap().containsValue(9)
+            response.categoricalData().get(0).categoricalMap().containsValue("9")
         );
         assertTrue(
             response
                 .categoricalData()
                 .get(0)
                 .categoricalMap()
-                .containsValue(45000)
+                .containsValue("45000")
         );
     }
 

@@ -11,21 +11,12 @@ import java.util.Map;
 @Component
 public class ContinuousDistributionProcessor {
 
-    private final BinningService binningService;
-
-    public ContinuousDistributionProcessor(BinningService binningService) {
-        this.binningService = binningService;
-    }
-
-    public List<ContinuousDistributionData> process(Map<String, Map<String, Integer>> crossCounts, boolean obfuscated, boolean binValues) {
-        Map<String, Map<String, Integer>> processed = binValues ? binningService.binContinuousData(crossCounts) : crossCounts;
+    public List<ContinuousDistributionData> process(Map<String, Map<String, String>> crossCounts, boolean obfuscated) {
         List<ContinuousDistributionData> distributions = new ArrayList<>();
-
-        for (Map.Entry<String, Map<String, Integer>> entry : processed.entrySet()) {
+        for (Map.Entry<String, Map<String, String>> entry : crossCounts.entrySet()) {
             if (DistributionMetadata.SKIP_KEYS.contains(entry.getKey()) || entry.getValue().isEmpty()) {
                 continue;
             }
-
             String title = DistributionMetadata.titleFor(entry.getKey());
             distributions.add(
                 new ContinuousDistributionData(
@@ -34,7 +25,6 @@ public class ContinuousDistributionProcessor {
                 )
             );
         }
-
         return distributions;
     }
 }

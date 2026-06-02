@@ -41,10 +41,8 @@ class VisualizationServiceTest {
         ObfuscationParser obfuscationParser = new ObfuscationParser(10, 3);
         BinningService binningService = new BinningService();
         CategoricalAggregationService aggregationService = new CategoricalAggregationService(7);
-        CategoricalDistributionProcessor categoricalProcessor =
-            new CategoricalDistributionProcessor(7);
-        ContinuousDistributionProcessor continuousProcessor =
-            new ContinuousDistributionProcessor(binningService);
+        CategoricalDistributionProcessor categoricalProcessor = new CategoricalDistributionProcessor();
+        ContinuousDistributionProcessor continuousProcessor = new ContinuousDistributionProcessor();
         service = new VisualizationService(
             decomposer,
             hpdsClient,
@@ -215,14 +213,8 @@ class VisualizationServiceTest {
         );
 
         assertFalse(response.continuousData().isEmpty());
-        int totalOutput = response
-            .continuousData()
-            .get(0)
-            .continuousMap()
-            .values()
-            .stream()
-            .mapToInt(Integer::intValue)
-            .sum();
+        int totalOutput = response.continuousData().get(0).continuousMap().values().stream()
+            .mapToInt(Integer::parseInt).sum();
         assertEquals(600, totalOutput);
     }
 
