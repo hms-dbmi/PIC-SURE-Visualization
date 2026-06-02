@@ -14,7 +14,7 @@ public class ContinuousDistributionProcessor {
     public List<ContinuousDistributionData> process(Map<String, Map<String, String>> crossCounts, boolean obfuscated) {
         List<ContinuousDistributionData> distributions = new ArrayList<>();
         for (Map.Entry<String, Map<String, String>> entry : crossCounts.entrySet()) {
-            if (DistributionMetadata.SKIP_KEYS.contains(entry.getKey()) || entry.getValue().isEmpty()) {
+            if (DistributionMetadata.SKIP_KEYS.contains(entry.getKey()) || entry.getValue() == null || entry.getValue().isEmpty()) {
                 continue;
             }
             String title = DistributionMetadata.titleFor(entry.getKey());

@@ -376,4 +376,32 @@ class VisualizationServiceTest {
             "VisualizationService should run CategoricalAggregationService on AUTH categorical data"
         );
     }
+
+    @Test
+    void generateDistributions_authorized_nullCountInResponse_skipsNullEntries() {
+        PhenotypicFilter catFilter = new PhenotypicFilter(
+            PhenotypicFilterType.FILTER, "\\demographics\\race\\", Set.of("White"), null, null, null
+        );
+        Query query = new Query(List.of(), List.of(), catFilter, List.of(), null, null, null);
+
+        Map<String, Integer> values = new LinkedHashMap<>();
+        values.put("White", 45000);
+        values.put("Black", null);
+        Map<String, Map<String, Integer>> crossCounts = new LinkedHashMap<>();
+        crossCounts.put("\\demographics\\race\\", values);
+        when(hpdsClient.getAuthCrossCounts(
+            any(), eq(ResultType.CATEGORICAL_CROSS_COUNT), eq(AUTHORIZED_UUID), any()
+        )).thenReturn(crossCounts);
+
+        VisualizationResponse response = service.generateDistributions(
+            query,
+            new HpdsAccessContext(AUTHORIZED_UUID, AccessType.AUTHORIZED),
+            "Bearer token"
+        );
+
+        assertFalse(response.categoricalData().isEmpty());
+        Map<String, String> race = response.categoricalData().get(0).categoricalMap();
+        assertEquals("45000", race.get("White"));
+        assertFalse(race.containsKey("Black"), "Null counts must be skipped, not crash");
+    }
 }

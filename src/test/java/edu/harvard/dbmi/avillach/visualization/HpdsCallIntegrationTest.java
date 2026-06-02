@@ -348,4 +348,59 @@ class HpdsCallIntegrationTest {
 
         mockServer.verify();
     }
+
+    @Test
+    void distributions_open_continuous_callsHpdsAndForwardsBinnedObfuscatedStrings()
+        throws Exception {
+        Map<String, Map<String, String>> hpdsResponse = new LinkedHashMap<>();
+        hpdsResponse.put(
+            "\\measurements\\bmi\\",
+            new LinkedHashMap<>(
+                Map.of("18.0 - 24.0", "600 ±3", "24.0 - 30.0", "< 10", "30.0 +", "150 ±3")
+            )
+        );
+
+        mockServer
+            .expect(requestTo("http://localhost:9999/mock-hpds/query/sync"))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(
+                withSuccess(
+                    objectMapper.writeValueAsString(hpdsResponse),
+                    MediaType.APPLICATION_JSON
+                )
+            );
+
+        Map<String, Object> query = Map.of(
+            "phenotypicClause",
+            Map.of(
+                "phenotypicFilterType", "FILTER",
+                "conceptPath", "\\measurements\\bmi\\",
+                "min", 18.0,
+                "max", 40.0
+            ),
+            "select", List.of(),
+            "authorizationFilters", List.of(),
+            "genomicFilters", List.of()
+        );
+        String body = objectMapper.writeValueAsString(
+            Map.of("hpdsResourceUUID", OPEN_UUID, "query", query)
+        );
+
+        MvcResult result = mockMvc
+            .perform(post("/distributions").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        mockServer.verify();
+
+        VisualizationResponse response = objectMapper.readValue(
+            result.getResponse().getContentAsString(), VisualizationResponse.class
+        );
+        assertFalse(response.continuousData().isEmpty());
+        assertTrue(response.continuousData().get(0).obfuscated());
+        Map<String, String> bmi = response.continuousData().get(0).continuousMap();
+        assertEquals("600 ±3", bmi.get("18.0 - 24.0"));
+        assertEquals("< 10", bmi.get("24.0 - 30.0"));
+        assertEquals("150 ±3", bmi.get("30.0 +"));
+    }
 }

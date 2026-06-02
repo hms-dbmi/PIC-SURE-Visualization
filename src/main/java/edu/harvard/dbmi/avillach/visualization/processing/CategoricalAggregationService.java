@@ -19,9 +19,7 @@ public class CategoricalAggregationService {
 
     private final int maxCategories;
 
-    public CategoricalAggregationService(
-        @Value("${distribution.categorical.max-categories:${chart.categorical.max-categories:7}}") int maxCategories
-    ) {
+    public CategoricalAggregationService(@Value("${chart.categorical.max-categories:7}") int maxCategories) {
         this.maxCategories = maxCategories;
     }
 
@@ -38,7 +36,7 @@ public class CategoricalAggregationService {
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, Integer::sum, LinkedHashMap::new));
             axisMap = limitKeySize(axisMap).entrySet().stream().sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, Integer::sum, LinkedHashMap::new));
-            axisMap.put("Other", otherSum);
+            axisMap.merge("Other", otherSum, Integer::sum);
         } else {
             axisMap = limitKeySize(finalAxisMap).entrySet().stream().sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, Integer::sum, LinkedHashMap::new));
