@@ -69,6 +69,18 @@ class CategoricalDistributionProcessorTest {
     }
 
     @Test
+    void process_nullInnerMap_skippedWithoutCrash() {
+        Map<String, Map<String, String>> data = new LinkedHashMap<>();
+        data.put("\\demographics\\race\\", null);
+        data.put("\\demographics\\sex\\", new LinkedHashMap<>(Map.of("Female", "100")));
+
+        List<CategoricalDistributionData> result = processor.process(data, false);
+
+        assertEquals(1, result.size());
+        assertEquals("\\demographics\\sex\\", result.get(0).conceptPath());
+    }
+
+    @Test
     void metadata_extractsTitleAndXAxisLabel() {
         String title = DistributionMetadata.titleFor("\\demographics\\race\\");
         assertEquals("demographics: race", title);

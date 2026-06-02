@@ -114,6 +114,29 @@ class CategoricalAggregationServiceTest {
     }
 
     @Test
+    void aggregateTopN_realCategoryNamedOther_sumsWithTailBucket() {
+        Map<String, Integer> categories = new LinkedHashMap<>();
+        categories.put("Cat1", 100);
+        categories.put("Cat2", 90);
+        categories.put("Cat3", 80);
+        categories.put("Cat4", 70);
+        categories.put("Cat5", 60);
+        categories.put("Cat6", 50);
+        categories.put("Other", 40);
+        categories.put("Cat8", 30);
+        categories.put("Cat9", 20);
+
+        Map<String, Integer> result = service.aggregateTopN(categories);
+
+        assertEquals(90, result.get("Other"), "Real 'Other' category must sum with tail bucket, not be overwritten");
+        assertEquals(
+            categories.values().stream().mapToInt(Integer::intValue).sum(),
+            result.values().stream().mapToInt(Integer::intValue).sum(),
+            "Total count must be preserved"
+        );
+    }
+
+    @Test
     void aggregateTopN_manyKeysSharingFullPrefix_doesNotCrashLoop() {
         // Pre-fix: createAdjustedKey's disambiguation loop crashes with
         // StringIndexOutOfBoundsException around the 38th key because the

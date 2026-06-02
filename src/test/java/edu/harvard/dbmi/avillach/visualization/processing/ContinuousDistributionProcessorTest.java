@@ -64,4 +64,16 @@ class ContinuousDistributionProcessorTest {
 
         assertEquals(1, result.size());
     }
+
+    @Test
+    void process_nullInnerMap_skippedWithoutCrash() {
+        Map<String, Map<String, String>> data = new LinkedHashMap<>();
+        data.put("\\measurements\\bmi\\", null);
+        data.put("\\measurements\\age\\", new LinkedHashMap<>(Map.of("25.0", "100")));
+
+        List<ContinuousDistributionData> result = processor.process(data, false);
+
+        assertEquals(1, result.size());
+        assertEquals("\\measurements\\age\\", result.get(0).conceptPath());
+    }
 }

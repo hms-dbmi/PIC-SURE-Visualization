@@ -65,12 +65,16 @@ public class VisualizationService {
                             descriptor.query(), descriptor.resultType(), accessContext.resourceUUID(), bearerToken, requestId,
                             accessContext.accessType(), descriptor.distributionKind()
                         );
+                    logRawHpdsShape(descriptor, crossCounts);
 
                     Map<String, Map<String, Integer>> processed = new LinkedHashMap<>();
-                    if (descriptor.distributionKind() == DistributionType.CONTINUOUS) {
-                        crossCounts.forEach((concept, values) -> processed.put(concept, binningService.bucketData(values)));
-                    } else {
-                        crossCounts.forEach((concept, values) -> processed.put(concept, categoricalAggregationService.aggregateTopN(values)));
+                    switch (descriptor.distributionKind()) {
+                        case CONTINUOUS -> crossCounts
+                            .forEach((concept, values) -> processed.put(concept, binningService.bucketData(nonNullValues(values))));
+                        case CATEGORICAL -> crossCounts
+                            .forEach(
+                                (concept, values) -> processed.put(concept, categoricalAggregationService.aggregateTopN(nonNullValues(values)))
+                            );
                     }
                     addDistributions(descriptor, stringify(processed), false, categoricalData, continuousData);
                 } else {
@@ -80,6 +84,7 @@ public class VisualizationService {
                             descriptor.query(), descriptor.resultType(), accessContext.resourceUUID(), bearerToken, requestId,
                             accessContext.accessType(), descriptor.distributionKind()
                         );
+                    logRawHpdsShape(descriptor, rawCrossCounts);
                     if (hasSeriesData(rawCrossCounts)) {
                         addDistributions(descriptor, rawCrossCounts, true, categoricalData, continuousData);
                     }
@@ -113,11 +118,30 @@ public class VisualizationService {
         return queryDecomposer.decompose(query).size();
     }
 
+    private static Map<String, Integer> nonNullValues(Map<String, Integer> values) {
+        Map<String, Integer> out = new LinkedHashMap<>();
+        if (values == null) {
+            return out;
+        }
+        values.forEach((k, v) -> {
+            if (v != null) {
+                out.put(k, v);
+            }
+        });
+        return out;
+    }
+
     private static Map<String, Map<String, String>> stringify(Map<String, Map<String, Integer>> input) {
         Map<String, Map<String, String>> out = new LinkedHashMap<>();
         input.forEach((concept, values) -> {
             Map<String, String> stringValues = new LinkedHashMap<>();
-            values.forEach((k, v) -> stringValues.put(k, Integer.toString(v)));
+            if (values != null) {
+                values.forEach((k, v) -> {
+                    if (v != null) {
+                        stringValues.put(k, Integer.toString(v));
+                    }
+                });
+            }
             out.put(concept, stringValues);
         });
         return out;
@@ -130,15 +154,31 @@ public class VisualizationService {
         if (!hasSeriesData(crossCounts)) {
             return;
         }
-        if (descriptor.distributionKind() == DistributionType.CATEGORICAL) {
-            List<CategoricalDistributionData> charts = categoricalDistributionProcessor.process(crossCounts, isObfuscated);
-            categoricalData.addAll(charts);
-            logCreatedCharts(descriptor, charts.size(), crossCounts, isObfuscated);
-        } else {
-            List<ContinuousDistributionData> charts = continuousDistributionProcessor.process(crossCounts, isObfuscated);
-            continuousData.addAll(charts);
-            logCreatedCharts(descriptor, charts.size(), crossCounts, isObfuscated);
+        switch (descriptor.distributionKind()) {
+            case CATEGORICAL -> {
+                List<CategoricalDistributionData> charts = categoricalDistributionProcessor.process(crossCounts, isObfuscated);
+                categoricalData.addAll(charts);
+                logCreatedCharts(descriptor, charts.size(), crossCounts, isObfuscated);
+            }
+            case CONTINUOUS -> {
+                List<ContinuousDistributionData> charts = continuousDistributionProcessor.process(crossCounts, isObfuscated);
+                continuousData.addAll(charts);
+                logCreatedCharts(descriptor, charts.size(), crossCounts, isObfuscated);
+            }
         }
+    }
+
+    private static void logRawHpdsShape(
+        QueryDecomposer.SubQueryDescriptor descriptor, Map<String, ? extends Map<?, ?>> rawCrossCounts
+    ) {
+        if (rawCrossCounts == null) {
+            return;
+        }
+        logger.info(
+            "HPDS cross-counts received distributionKind={} resultType={} rawSeriesCount={} rawPointCount={} rawSeriesKeys={}",
+            descriptor.distributionKind().name().toLowerCase(), descriptor.resultType(), rawCrossCounts.size(),
+            sourcePointCount(rawCrossCounts), new ArrayList<>(rawCrossCounts.keySet())
+        );
     }
 
     private static void logCreatedCharts(
