@@ -25,20 +25,18 @@ public class VisualizationService {
 
     private final QueryDecomposer queryDecomposer;
     private final HpdsClient hpdsClient;
-    private final ObfuscationParser obfuscationParser;
     private final CategoricalDistributionProcessor categoricalDistributionProcessor;
     private final ContinuousDistributionProcessor continuousDistributionProcessor;
     private final BinningService binningService;
     private final CategoricalAggregationService categoricalAggregationService;
 
     public VisualizationService(
-        QueryDecomposer queryDecomposer, HpdsClient hpdsClient, ObfuscationParser obfuscationParser,
+        QueryDecomposer queryDecomposer, HpdsClient hpdsClient,
         CategoricalDistributionProcessor categoricalDistributionProcessor, ContinuousDistributionProcessor continuousDistributionProcessor,
         BinningService binningService, CategoricalAggregationService categoricalAggregationService
     ) {
         this.queryDecomposer = queryDecomposer;
         this.hpdsClient = hpdsClient;
-        this.obfuscationParser = obfuscationParser;
         this.categoricalDistributionProcessor = categoricalDistributionProcessor;
         this.continuousDistributionProcessor = continuousDistributionProcessor;
         this.binningService = binningService;

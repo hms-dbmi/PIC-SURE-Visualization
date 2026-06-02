@@ -38,7 +38,6 @@ class VisualizationServiceTest {
     @BeforeEach
     void setUp() {
         QueryDecomposer decomposer = new QueryDecomposer();
-        ObfuscationParser obfuscationParser = new ObfuscationParser(10, 3);
         BinningService binningService = new BinningService();
         CategoricalAggregationService aggregationService = new CategoricalAggregationService(7);
         CategoricalDistributionProcessor categoricalProcessor = new CategoricalDistributionProcessor();
@@ -46,7 +45,6 @@ class VisualizationServiceTest {
         service = new VisualizationService(
             decomposer,
             hpdsClient,
-            obfuscationParser,
             categoricalProcessor,
             continuousProcessor,
             binningService,
