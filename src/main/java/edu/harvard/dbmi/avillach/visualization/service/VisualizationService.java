@@ -4,10 +4,12 @@ import edu.harvard.dbmi.avillach.visualization.error.HpdsUpstreamException;
 import edu.harvard.dbmi.avillach.visualization.error.VisualizationException;
 import edu.harvard.dbmi.avillach.visualization.model.*;
 import edu.harvard.dbmi.avillach.visualization.processing.BinningService;
+import edu.harvard.dbmi.avillach.visualization.processing.CategoricalAggregationService;
 import edu.harvard.dbmi.avillach.visualization.processing.CategoricalDistributionProcessor;
 import edu.harvard.dbmi.avillach.visualization.processing.ContinuousDistributionProcessor;
 import edu.harvard.hms.dbmi.avillach.hpds.data.query.v3.Query;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -27,11 +29,12 @@ public class VisualizationService {
     private final CategoricalDistributionProcessor categoricalDistributionProcessor;
     private final ContinuousDistributionProcessor continuousDistributionProcessor;
     private final BinningService binningService;
+    private final CategoricalAggregationService categoricalAggregationService;
 
     public VisualizationService(
         QueryDecomposer queryDecomposer, HpdsClient hpdsClient, ObfuscationParser obfuscationParser,
         CategoricalDistributionProcessor categoricalDistributionProcessor, ContinuousDistributionProcessor continuousDistributionProcessor,
-        BinningService binningService
+        BinningService binningService, CategoricalAggregationService categoricalAggregationService
     ) {
         this.queryDecomposer = queryDecomposer;
         this.hpdsClient = hpdsClient;
@@ -39,6 +42,7 @@ public class VisualizationService {
         this.categoricalDistributionProcessor = categoricalDistributionProcessor;
         this.continuousDistributionProcessor = continuousDistributionProcessor;
         this.binningService = binningService;
+        this.categoricalAggregationService = categoricalAggregationService;
     }
 
     public VisualizationResponse generateDistributions(Query query, HpdsAccessContext accessContext, String bearerToken) {
@@ -64,8 +68,20 @@ public class VisualizationService {
                             descriptor.query(), descriptor.resultType(), accessContext.resourceUUID(), bearerToken, requestId,
                             accessContext.accessType(), descriptor.distributionKind()
                         );
+
+                    Map<String, Map<String, Integer>> processed = new LinkedHashMap<>();
+                    if (descriptor.distributionKind() == DistributionType.CONTINUOUS) {
+                        crossCounts.forEach((concept, values) ->
+                            processed.put(concept, binningService.bucketData(values))
+                        );
+                    } else {
+                        crossCounts.forEach((concept, values) ->
+                            processed.put(concept, categoricalAggregationService.aggregateTopN(values))
+                        );
+                    }
+
                     addDistributions(
-                        descriptor, crossCounts, DistributionProcessingOptions.AUTHORIZED, false, categoricalData, continuousData
+                        descriptor, processed, DistributionProcessingOptions.AUTHORIZED, false, categoricalData, continuousData
                     );
                 } else {
                     Map<String, Map<String, String>> rawCrossCounts = requestId == null
