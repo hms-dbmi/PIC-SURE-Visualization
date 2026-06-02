@@ -148,6 +148,35 @@ class VisualizationServiceTest {
     }
 
     @Test
+    void generateDistributions_open_setsObfuscatedFromAccessTypeRegardlessOfValues() {
+        PhenotypicFilter catFilter = new PhenotypicFilter(
+            PhenotypicFilterType.FILTER, "\\demographics\\race\\", Set.of("White"), null, null, null
+        );
+        Query query = new Query(List.of(), List.of(), catFilter, List.of(), null, null, null);
+
+        // All values look like plain integers — no markers at all.
+        Map<String, Map<String, String>> openCrossCounts = new LinkedHashMap<>();
+        openCrossCounts.put(
+            "\\demographics\\race\\",
+            new LinkedHashMap<>(Map.of("White", "45000", "Black", "12000"))
+        );
+        when(hpdsClient.getOpenCrossCounts(
+            any(), eq(ResultType.CATEGORICAL_CROSS_COUNT), eq(OPEN_UUID), any()
+        )).thenReturn(openCrossCounts);
+
+        VisualizationResponse response = service.generateDistributions(
+            query,
+            new HpdsAccessContext(OPEN_UUID, AccessType.OPEN),
+            null
+        );
+
+        assertTrue(
+            response.categoricalData().get(0).obfuscated(),
+            "OPEN access must set obfuscated=true even if values contain no markers"
+        );
+    }
+
+    @Test
     void generateDistributions_noFilters_returnsEmptyCharts() {
         Query query = new Query(
             List.of(),

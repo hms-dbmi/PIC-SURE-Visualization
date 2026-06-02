@@ -83,11 +83,7 @@ public class VisualizationService {
                             accessContext.accessType(), descriptor.distributionKind()
                         );
                     if (hasSeriesData(rawCrossCounts)) {
-                        boolean isObfuscated = obfuscationParser.isObfuscated(rawCrossCounts);
-                        Map<String, Map<String, Integer>> cleanedCounts = obfuscationParser.clean(rawCrossCounts);
-                        if (hasSeriesData(cleanedCounts)) {
-                            addDistributions(descriptor, stringify(cleanedCounts), isObfuscated, categoricalData, continuousData);
-                        }
+                        addDistributions(descriptor, rawCrossCounts, true, categoricalData, continuousData);
                     }
                 }
             } catch (HttpStatusCodeException e) {
