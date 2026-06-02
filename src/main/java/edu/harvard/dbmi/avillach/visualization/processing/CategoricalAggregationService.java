@@ -26,6 +26,9 @@ public class CategoricalAggregationService {
     }
 
     public Map<String, Integer> aggregateTopN(Map<String, Integer> axisMap) {
+        if (axisMap == null || axisMap.isEmpty()) {
+            return new LinkedHashMap<>();
+        }
         Map<String, Integer> finalAxisMap = axisMap;
         if (axisMap.size() > maxCategories) {
             Supplier<Stream<Map.Entry<String, Integer>>> stream =

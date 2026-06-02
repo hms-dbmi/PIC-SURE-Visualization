@@ -85,4 +85,18 @@ class CategoricalAggregationServiceTest {
             "Long keys should be truncated"
         );
     }
+
+    @Test
+    void aggregateTopN_nullInput_returnsEmptyMap() {
+        Map<String, Integer> result = service.aggregateTopN(null);
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void aggregateTopN_emptyInput_returnsEmptyMap() {
+        Map<String, Integer> result = service.aggregateTopN(new java.util.LinkedHashMap<>());
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
 }
