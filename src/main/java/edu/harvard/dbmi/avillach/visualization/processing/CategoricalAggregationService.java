@@ -35,13 +35,13 @@ public class CategoricalAggregationService {
                 () -> finalAxisMap.entrySet().stream().sorted(Collections.reverseOrder(Map.Entry.comparingByValue()));
             int otherSum = stream.get().skip(maxCategories).mapToInt(Map.Entry::getValue).sum();
             axisMap = stream.get().limit(maxCategories)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2, LinkedHashMap::new));
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, Integer::sum, LinkedHashMap::new));
             axisMap = limitKeySize(axisMap).entrySet().stream().sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2, LinkedHashMap::new));
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, Integer::sum, LinkedHashMap::new));
             axisMap.put("Other", otherSum);
         } else {
             axisMap = limitKeySize(finalAxisMap).entrySet().stream().sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2, LinkedHashMap::new));
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, Integer::sum, LinkedHashMap::new));
         }
         return axisMap;
     }
@@ -51,7 +51,7 @@ public class CategoricalAggregationService {
         Set<String> keys = new HashSet<>();
         axisMap.forEach((key, value) -> {
             String adjustedKey = key.length() < MAX_LABEL_LENGTH ? key : createAdjustedKey(axisMap, keys, key);
-            newAxisMap.put(adjustedKey, value);
+            newAxisMap.merge(adjustedKey, value, Integer::sum);
             keys.add(adjustedKey);
         });
         return newAxisMap;
@@ -59,13 +59,17 @@ public class CategoricalAggregationService {
 
     private static String createAdjustedKey(Map<String, Integer> axisMap, Set<String> keys, String key) {
         String keyPrefix = key.substring(0, MAX_LABEL_LENGTH);
-        boolean prefixExists = axisMap.keySet().stream().anyMatch(k -> k.startsWith(keyPrefix));
+        boolean prefixExists = axisMap.keySet().stream().anyMatch(k -> !k.equals(key) && k.startsWith(keyPrefix));
         if (prefixExists) {
             int countFromEnd = 6;
             String proposedKey;
             do {
-                proposedKey = String
-                    .format("%s...%s", key.substring(0, MAX_LABEL_LENGTH - 3 - countFromEnd), key.substring(key.length() - countFromEnd));
+                int prefixLen = MAX_LABEL_LENGTH - 3 - countFromEnd;
+                int suffixStart = key.length() - countFromEnd;
+                if (prefixLen < 1 || suffixStart < 0) {
+                    return key.substring(0, MAX_LABEL_LENGTH - 11) + "..." + String.format("%08x", key.hashCode());
+                }
+                proposedKey = String.format("%s...%s", key.substring(0, prefixLen), key.substring(suffixStart));
                 countFromEnd++;
             } while (keys.contains(proposedKey));
             return proposedKey;
