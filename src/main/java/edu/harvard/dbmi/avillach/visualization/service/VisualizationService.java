@@ -138,7 +138,7 @@ public class VisualizationService {
             if (values != null) {
                 values.forEach((k, v) -> {
                     if (v != null) {
-                        wrappedValues.put(k, new ObfuscatedCount(v, Integer.toString(v)));
+                        wrappedValues.put(k, ObfuscatedCount.ofInt(v));
                     }
                 });
             }
