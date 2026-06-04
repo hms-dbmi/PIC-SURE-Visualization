@@ -1,6 +1,7 @@
 package edu.harvard.dbmi.avillach.visualization.processing;
 
 import edu.harvard.dbmi.avillach.visualization.model.ContinuousDistributionData;
+import edu.harvard.dbmi.avillach.visualization.model.ObfuscatedCount;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -11,9 +12,9 @@ import java.util.Map;
 @Component
 public class ContinuousDistributionProcessor {
 
-    public List<ContinuousDistributionData> process(Map<String, Map<String, String>> crossCounts, boolean obfuscated) {
+    public List<ContinuousDistributionData> process(Map<String, Map<String, ObfuscatedCount>> crossCounts, boolean obfuscated) {
         List<ContinuousDistributionData> distributions = new ArrayList<>();
-        for (Map.Entry<String, Map<String, String>> entry : crossCounts.entrySet()) {
+        for (Map.Entry<String, Map<String, ObfuscatedCount>> entry : crossCounts.entrySet()) {
             if (DistributionMetadata.SKIP_KEYS.contains(entry.getKey()) || entry.getValue() == null || entry.getValue().isEmpty()) {
                 continue;
             }
