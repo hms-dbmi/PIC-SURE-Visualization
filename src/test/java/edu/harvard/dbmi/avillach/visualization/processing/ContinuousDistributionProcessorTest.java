@@ -3,6 +3,7 @@ package edu.harvard.dbmi.avillach.visualization.processing;
 import static org.junit.jupiter.api.Assertions.*;
 
 import edu.harvard.dbmi.avillach.visualization.model.ContinuousDistributionData;
+import edu.harvard.dbmi.avillach.visualization.model.ObfuscatedCount;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,11 +20,15 @@ class ContinuousDistributionProcessorTest {
     }
 
     @Test
-    void process_preBinnedStrings_returnsContinuousDistribution() {
-        Map<String, Map<String, String>> data = new LinkedHashMap<>();
+    void process_preBinnedValues_returnsContinuousDistribution() {
+        Map<String, Map<String, ObfuscatedCount>> data = new LinkedHashMap<>();
         data.put(
             "\\measurements\\bmi\\",
-            new LinkedHashMap<>(Map.of("18.0 - 24.0", "600", "24.0 - 30.0", "700", "30.0 +", "150"))
+            new LinkedHashMap<>(Map.of(
+                "18.0 - 24.0", new ObfuscatedCount(600, "600"),
+                "24.0 - 30.0", new ObfuscatedCount(700, "700"),
+                "30.0 +", new ObfuscatedCount(150, "150")
+            ))
         );
 
         List<ContinuousDistributionData> result = processor.process(data, false);
@@ -34,31 +39,40 @@ class ContinuousDistributionProcessorTest {
         assertEquals("measurements: bmi", distribution.title());
         assertTrue(distribution.continuous());
         assertFalse(distribution.obfuscated());
-        assertEquals("600", distribution.continuousMap().get("18.0 - 24.0"));
+        ObfuscatedCount firstBin = distribution.continuousMap().get("18.0 - 24.0");
+        assertEquals(600, firstBin.count());
+        assertEquals("600", firstBin.display());
     }
 
     @Test
-    void process_obfuscatedStrings_passedThroughUnchanged() {
-        Map<String, Map<String, String>> data = new LinkedHashMap<>();
+    void process_obfuscatedValues_passedThroughUnchanged() {
+        Map<String, Map<String, ObfuscatedCount>> data = new LinkedHashMap<>();
         data.put(
             "\\measurements\\bmi\\",
-            new LinkedHashMap<>(Map.of("18.0 - 22.0", "500 ±3", "22.0 - 26.0", "< 10"))
+            new LinkedHashMap<>(Map.of(
+                "18.0 - 22.0", new ObfuscatedCount(500, "500 ±3"),
+                "22.0 - 26.0", new ObfuscatedCount(9, "< 10")
+            ))
         );
 
         List<ContinuousDistributionData> result = processor.process(data, true);
 
         assertEquals(1, result.size());
         assertTrue(result.get(0).obfuscated());
-        assertEquals("500 ±3", result.get(0).continuousMap().get("18.0 - 22.0"));
-        assertEquals("< 10", result.get(0).continuousMap().get("22.0 - 26.0"));
+        ObfuscatedCount lo = result.get(0).continuousMap().get("18.0 - 22.0");
+        assertEquals(500, lo.count());
+        assertEquals("500 ±3", lo.display());
+        ObfuscatedCount hi = result.get(0).continuousMap().get("22.0 - 26.0");
+        assertEquals(9, hi.count());
+        assertEquals("< 10", hi.display());
     }
 
     @Test
     void process_skipsConsentKeysAndEmptySeries() {
-        Map<String, Map<String, String>> data = new LinkedHashMap<>();
-        data.put("\\_consents\\", Map.of("1.0", "100"));
+        Map<String, Map<String, ObfuscatedCount>> data = new LinkedHashMap<>();
+        data.put("\\_consents\\", Map.of("1.0", new ObfuscatedCount(100, "100")));
         data.put("\\empty\\", Map.of());
-        data.put("\\measurements\\bmi\\", new LinkedHashMap<>(Map.of("25.0", "100")));
+        data.put("\\measurements\\bmi\\", new LinkedHashMap<>(Map.of("25.0", new ObfuscatedCount(100, "100"))));
 
         List<ContinuousDistributionData> result = processor.process(data, false);
 
@@ -67,9 +81,9 @@ class ContinuousDistributionProcessorTest {
 
     @Test
     void process_nullInnerMap_skippedWithoutCrash() {
-        Map<String, Map<String, String>> data = new LinkedHashMap<>();
+        Map<String, Map<String, ObfuscatedCount>> data = new LinkedHashMap<>();
         data.put("\\measurements\\bmi\\", null);
-        data.put("\\measurements\\age\\", new LinkedHashMap<>(Map.of("25.0", "100")));
+        data.put("\\measurements\\age\\", new LinkedHashMap<>(Map.of("25.0", new ObfuscatedCount(100, "100"))));
 
         List<ContinuousDistributionData> result = processor.process(data, false);
 

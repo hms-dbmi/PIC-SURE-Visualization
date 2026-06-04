@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import edu.harvard.dbmi.avillach.visualization.model.AccessType;
 import edu.harvard.dbmi.avillach.visualization.model.HpdsAccessContext;
+import edu.harvard.dbmi.avillach.visualization.model.ObfuscatedCount;
 import edu.harvard.dbmi.avillach.visualization.model.VisualizationResponse;
 import edu.harvard.dbmi.avillach.visualization.processing.BinningService;
 import edu.harvard.dbmi.avillach.visualization.processing.CategoricalAggregationService;
@@ -120,11 +121,14 @@ class VisualizationServiceTest {
             null
         );
 
-        Map<String, Map<String, String>> openCrossCounts =
+        Map<String, Map<String, ObfuscatedCount>> openCrossCounts =
             new LinkedHashMap<>();
         openCrossCounts.put(
             "\\demographics\\race\\",
-            new LinkedHashMap<>(Map.of("White", "45000±3", "Other", "< 10"))
+            new LinkedHashMap<>(Map.of(
+                "White", new ObfuscatedCount(45000, "45000±3"),
+                "Other", new ObfuscatedCount(9, "< 10")
+            ))
         );
         when(
             hpdsClient.getOpenCrossCounts(
@@ -153,10 +157,13 @@ class VisualizationServiceTest {
         Query query = new Query(List.of(), List.of(), catFilter, List.of(), null, null, null);
 
         // All values look like plain integers — no markers at all.
-        Map<String, Map<String, String>> openCrossCounts = new LinkedHashMap<>();
+        Map<String, Map<String, ObfuscatedCount>> openCrossCounts = new LinkedHashMap<>();
         openCrossCounts.put(
             "\\demographics\\race\\",
-            new LinkedHashMap<>(Map.of("White", "45000", "Black", "12000"))
+            new LinkedHashMap<>(Map.of(
+                "White", new ObfuscatedCount(45000, "45000"),
+                "Black", new ObfuscatedCount(12000, "12000")
+            ))
         );
         when(hpdsClient.getOpenCrossCounts(
             any(), eq(ResultType.CATEGORICAL_CROSS_COUNT), eq(OPEN_UUID), any()
@@ -241,7 +248,7 @@ class VisualizationServiceTest {
 
         assertFalse(response.continuousData().isEmpty());
         int totalOutput = response.continuousData().get(0).continuousMap().values().stream()
-            .mapToInt(Integer::parseInt).sum();
+            .mapToInt(ObfuscatedCount::count).sum();
         assertEquals(600, totalOutput);
     }
 
@@ -400,8 +407,8 @@ class VisualizationServiceTest {
         );
 
         assertFalse(response.categoricalData().isEmpty());
-        Map<String, String> race = response.categoricalData().get(0).categoricalMap();
-        assertEquals("45000", race.get("White"));
+        Map<String, ObfuscatedCount> race = response.categoricalData().get(0).categoricalMap();
+        assertEquals(new ObfuscatedCount(45000, "45000"), race.get("White"));
         assertFalse(race.containsKey("Black"), "Null counts must be skipped, not crash");
     }
 }

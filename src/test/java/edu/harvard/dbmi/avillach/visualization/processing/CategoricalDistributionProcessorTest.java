@@ -3,6 +3,7 @@ package edu.harvard.dbmi.avillach.visualization.processing;
 import static org.junit.jupiter.api.Assertions.*;
 
 import edu.harvard.dbmi.avillach.visualization.model.CategoricalDistributionData;
+import edu.harvard.dbmi.avillach.visualization.model.ObfuscatedCount;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,10 +21,14 @@ class CategoricalDistributionProcessorTest {
 
     @Test
     void process_simpleCategoricalData_returnsDistributionData() {
-        Map<String, Map<String, String>> data = new LinkedHashMap<>();
+        Map<String, Map<String, ObfuscatedCount>> data = new LinkedHashMap<>();
         data.put(
             "\\demographics\\race\\",
-            new LinkedHashMap<>(Map.of("White", "45000", "Black", "12000", "Asian", "8000"))
+            new LinkedHashMap<>(Map.of(
+                "White", new ObfuscatedCount(45000, "45000"),
+                "Black", new ObfuscatedCount(12000, "12000"),
+                "Asian", new ObfuscatedCount(8000, "8000")
+            ))
         );
 
         List<CategoricalDistributionData> result = processor.process(data, false);
@@ -34,34 +39,43 @@ class CategoricalDistributionProcessorTest {
         assertEquals("demographics: race", distribution.title());
         assertFalse(distribution.continuous());
         assertFalse(distribution.obfuscated());
-        assertEquals("45000", distribution.categoricalMap().get("White"));
+        ObfuscatedCount white = distribution.categoricalMap().get("White");
+        assertEquals(45000, white.count());
+        assertEquals("45000", white.display());
         assertEquals("race", distribution.xaxisName());
         assertEquals("Number of Participants", distribution.yaxisName());
     }
 
     @Test
-    void process_obfuscatedStrings_passedThroughUnchanged() {
-        Map<String, Map<String, String>> data = new LinkedHashMap<>();
+    void process_obfuscatedValues_passedThroughUnchanged() {
+        Map<String, Map<String, ObfuscatedCount>> data = new LinkedHashMap<>();
         data.put(
             "\\demographics\\race\\",
-            new LinkedHashMap<>(Map.of("White", "45000 ±3", "Black", "< 10"))
+            new LinkedHashMap<>(Map.of(
+                "White", new ObfuscatedCount(45000, "45000 ±3"),
+                "Black", new ObfuscatedCount(9, "< 10")
+            ))
         );
 
         List<CategoricalDistributionData> result = processor.process(data, true);
 
         assertEquals(1, result.size());
         assertTrue(result.get(0).obfuscated());
-        assertEquals("45000 ±3", result.get(0).categoricalMap().get("White"));
-        assertEquals("< 10", result.get(0).categoricalMap().get("Black"));
+        ObfuscatedCount white = result.get(0).categoricalMap().get("White");
+        assertEquals(45000, white.count());
+        assertEquals("45000 ±3", white.display());
+        ObfuscatedCount black = result.get(0).categoricalMap().get("Black");
+        assertEquals(9, black.count());
+        assertEquals("< 10", black.display());
     }
 
     @Test
     void process_skipsConsentKeysAndEmptySeries() {
-        Map<String, Map<String, String>> data = new LinkedHashMap<>();
-        data.put("\\_consents\\", Map.of("consent1", "100"));
-        data.put("\\_harmonized_consent\\", Map.of("consent2", "200"));
+        Map<String, Map<String, ObfuscatedCount>> data = new LinkedHashMap<>();
+        data.put("\\_consents\\", Map.of("consent1", new ObfuscatedCount(100, "100")));
+        data.put("\\_harmonized_consent\\", Map.of("consent2", new ObfuscatedCount(200, "200")));
         data.put("\\empty\\", Map.of());
-        data.put("\\demographics\\race\\", new LinkedHashMap<>(Map.of("White", "45000")));
+        data.put("\\demographics\\race\\", new LinkedHashMap<>(Map.of("White", new ObfuscatedCount(45000, "45000"))));
 
         List<CategoricalDistributionData> result = processor.process(data, false);
 
@@ -70,9 +84,9 @@ class CategoricalDistributionProcessorTest {
 
     @Test
     void process_nullInnerMap_skippedWithoutCrash() {
-        Map<String, Map<String, String>> data = new LinkedHashMap<>();
+        Map<String, Map<String, ObfuscatedCount>> data = new LinkedHashMap<>();
         data.put("\\demographics\\race\\", null);
-        data.put("\\demographics\\sex\\", new LinkedHashMap<>(Map.of("Female", "100")));
+        data.put("\\demographics\\sex\\", new LinkedHashMap<>(Map.of("Female", new ObfuscatedCount(100, "100"))));
 
         List<CategoricalDistributionData> result = processor.process(data, false);
 
