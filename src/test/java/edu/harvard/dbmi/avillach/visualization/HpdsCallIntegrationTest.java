@@ -231,9 +231,9 @@ class HpdsCallIntegrationTest {
         hpdsResponse.put(
             "\\demographics\\race\\",
             new LinkedHashMap<>(Map.of(
-                "White", new ObfuscatedCount(45000, "45000 ±3"),
+                "White", new ObfuscatedCount(45000, "45000 ±3", 3),
                 "Black", new ObfuscatedCount(12000, "12000"),
-                "Other", new ObfuscatedCount(9, "< 10")
+                "Other", new ObfuscatedCount(0, "< 10", 9)
             ))
         );
 
@@ -263,9 +263,9 @@ class HpdsCallIntegrationTest {
         assertFalse(response.categoricalData().isEmpty());
         assertTrue(response.categoricalData().get(0).obfuscated());
         Map<String, ObfuscatedCount> race = response.categoricalData().get(0).categoricalMap();
-        assertEquals(new ObfuscatedCount(45000, "45000 ±3"), race.get("White"));
+        assertEquals(new ObfuscatedCount(45000, "45000 ±3", 3), race.get("White"));
         assertEquals(new ObfuscatedCount(12000, "12000"), race.get("Black"));
-        assertEquals(new ObfuscatedCount(9, "< 10"), race.get("Other"));
+        assertEquals(new ObfuscatedCount(0, "< 10", 9), race.get("Other"));
     }
 
     @Test
@@ -361,9 +361,9 @@ class HpdsCallIntegrationTest {
         hpdsResponse.put(
             "\\measurements\\bmi\\",
             new LinkedHashMap<>(Map.of(
-                "18.0 - 24.0", new ObfuscatedCount(600, "600 ±3"),
-                "24.0 - 30.0", new ObfuscatedCount(9, "< 10"),
-                "30.0 +", new ObfuscatedCount(150, "150 ±3")
+                "18.0 - 24.0", new ObfuscatedCount(600, "600 ±3", 3),
+                "24.0 - 30.0", new ObfuscatedCount(0, "< 10", 9),
+                "30.0 +", new ObfuscatedCount(150, "150 ±3", 3)
             ))
         );
 
@@ -406,8 +406,8 @@ class HpdsCallIntegrationTest {
         assertFalse(response.continuousData().isEmpty());
         assertTrue(response.continuousData().get(0).obfuscated());
         Map<String, ObfuscatedCount> bmi = response.continuousData().get(0).continuousMap();
-        assertEquals(new ObfuscatedCount(600, "600 ±3"), bmi.get("18.0 - 24.0"));
-        assertEquals(new ObfuscatedCount(9, "< 10"), bmi.get("24.0 - 30.0"));
-        assertEquals(new ObfuscatedCount(150, "150 ±3"), bmi.get("30.0 +"));
+        assertEquals(new ObfuscatedCount(600, "600 ±3", 3), bmi.get("18.0 - 24.0"));
+        assertEquals(new ObfuscatedCount(0, "< 10", 9), bmi.get("24.0 - 30.0"));
+        assertEquals(new ObfuscatedCount(150, "150 ±3", 3), bmi.get("30.0 +"));
     }
 }

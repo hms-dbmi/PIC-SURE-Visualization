@@ -52,8 +52,8 @@ class CategoricalDistributionProcessorTest {
         data.put(
             "\\demographics\\race\\",
             new LinkedHashMap<>(Map.of(
-                "White", new ObfuscatedCount(45000, "45000 ±3"),
-                "Black", new ObfuscatedCount(9, "< 10")
+                "White", new ObfuscatedCount(45000, "45000 ±3", 3),
+                "Black", new ObfuscatedCount(0, "< 10", 9)
             ))
         );
 
@@ -64,9 +64,11 @@ class CategoricalDistributionProcessorTest {
         ObfuscatedCount white = result.get(0).categoricalMap().get("White");
         assertEquals(45000, white.count());
         assertEquals("45000 ±3", white.display());
+        assertEquals(Integer.valueOf(3), white.variance());
         ObfuscatedCount black = result.get(0).categoricalMap().get("Black");
-        assertEquals(9, black.count());
+        assertEquals(0, black.count());
         assertEquals("< 10", black.display());
+        assertEquals(Integer.valueOf(9), black.variance());
     }
 
     @Test

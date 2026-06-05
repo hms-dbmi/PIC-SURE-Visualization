@@ -50,8 +50,8 @@ class ContinuousDistributionProcessorTest {
         data.put(
             "\\measurements\\bmi\\",
             new LinkedHashMap<>(Map.of(
-                "18.0 - 22.0", new ObfuscatedCount(500, "500 ±3"),
-                "22.0 - 26.0", new ObfuscatedCount(9, "< 10")
+                "18.0 - 22.0", new ObfuscatedCount(500, "500 ±3", 3),
+                "22.0 - 26.0", new ObfuscatedCount(0, "< 10", 9)
             ))
         );
 
@@ -62,9 +62,11 @@ class ContinuousDistributionProcessorTest {
         ObfuscatedCount lo = result.get(0).continuousMap().get("18.0 - 22.0");
         assertEquals(500, lo.count());
         assertEquals("500 ±3", lo.display());
+        assertEquals(Integer.valueOf(3), lo.variance());
         ObfuscatedCount hi = result.get(0).continuousMap().get("22.0 - 26.0");
-        assertEquals(9, hi.count());
+        assertEquals(0, hi.count());
         assertEquals("< 10", hi.display());
+        assertEquals(Integer.valueOf(9), hi.variance());
     }
 
     @Test
