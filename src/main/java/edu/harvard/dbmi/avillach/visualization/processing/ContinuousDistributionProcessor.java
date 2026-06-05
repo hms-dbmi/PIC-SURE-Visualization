@@ -22,7 +22,7 @@ public class ContinuousDistributionProcessor {
             distributions.add(
                 new ContinuousDistributionData(
                     entry.getKey(), title, true, new LinkedHashMap<>(entry.getValue()), obfuscated,
-                    DistributionMetadata.xAxisLabelFor(title), "Number of Participants", null, null
+                    DistributionMetadata.xAxisLabelFor(entry.getKey()), "Number of Participants", null, null
                 )
             );
         }

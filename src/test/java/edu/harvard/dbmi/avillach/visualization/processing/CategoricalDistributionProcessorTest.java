@@ -98,9 +98,22 @@ class CategoricalDistributionProcessorTest {
 
     @Test
     void metadata_extractsTitleAndXAxisLabel() {
-        String title = DistributionMetadata.titleFor("\\demographics\\race\\");
-        assertEquals("demographics: race", title);
-        assertEquals("race", DistributionMetadata.xAxisLabelFor(title));
+        assertEquals("demographics: race", DistributionMetadata.titleFor("\\demographics\\race\\"));
+        assertEquals("race", DistributionMetadata.xAxisLabelFor("\\demographics\\race\\"));
         assertEquals("race", DistributionMetadata.titleFor("race"));
+    }
+
+    @Test
+    void metadata_depthOnePath_hasNoLeadingColon() {
+        assertEquals("age", DistributionMetadata.titleFor("\\age\\"));
+        assertEquals("age", DistributionMetadata.xAxisLabelFor("\\age\\"));
+    }
+
+    @Test
+    void metadata_multiWordVariableName_keepsFullNameForXAxis() {
+        assertEquals(
+            "family history of heart attack",
+            DistributionMetadata.xAxisLabelFor("\\demographics\\family history of heart attack\\")
+        );
     }
 }

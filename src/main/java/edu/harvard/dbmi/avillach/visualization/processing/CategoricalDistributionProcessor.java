@@ -22,7 +22,7 @@ public class CategoricalDistributionProcessor {
             distributions.add(
                 new CategoricalDistributionData(
                     entry.getKey(), title, false, new LinkedHashMap<>(entry.getValue()), obfuscated,
-                    DistributionMetadata.xAxisLabelFor(title), "Number of Participants", null, null
+                    DistributionMetadata.xAxisLabelFor(entry.getKey()), "Number of Participants", null, null
                 )
             );
         }
