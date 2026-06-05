@@ -126,8 +126,8 @@ class VisualizationServiceTest {
         openCrossCounts.put(
             "\\demographics\\race\\",
             new LinkedHashMap<>(Map.of(
-                "White", new ObfuscatedCount(45000, "45000±3"),
-                "Other", new ObfuscatedCount(9, "< 10")
+                "White", new ObfuscatedCount(45000, "45000±3", 3),
+                "Other", new ObfuscatedCount(0, "< 10", 9)
             ))
         );
         when(
