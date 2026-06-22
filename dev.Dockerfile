@@ -1,6 +1,6 @@
 FROM maven:3.9-amazoncorretto-25 AS build
 
-COPY --from=maven_m2_cache / /root/.m2/repository/
+COPY --from=m2_cache / /root/.m2/repository/
 COPY ./ /app
 
 WORKDIR /app
