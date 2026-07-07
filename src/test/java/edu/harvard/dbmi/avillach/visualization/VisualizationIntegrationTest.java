@@ -24,7 +24,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 // Production shape: no configured fallback UUIDs -- resourceUUID flows as null end-to-end (HpdsCallIntegrationTest
 // covers the configured-fallback shape via the test profile's properties).
-@TestPropertySource(properties = {"hpds.resource.authorized.uuid=", "hpds.resource.open.uuid="})
+// Actuator is OFF BY DEFAULT (empty exposure in application.properties); expose health here so healthEndpoint_isPublic
+// exercises the endpoint the AIO deployment enables via PICSURE_ACTUATOR_EXPOSURE=health.
+@TestPropertySource(properties = {"hpds.resource.authorized.uuid=", "hpds.resource.open.uuid=",
+    "management.endpoints.web.exposure.include=health"})
 class VisualizationIntegrationTest {
 
     private static final String AUTHORIZED_UUID = "550e8400-e29b-41d4-a716-446655440000";
