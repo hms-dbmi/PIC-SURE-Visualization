@@ -22,16 +22,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-// Production shape: no configured fallback UUIDs -- resourceUUID flows as null end-to-end (HpdsCallIntegrationTest
-// covers the configured-fallback shape via the test profile's properties).
 // Actuator is OFF BY DEFAULT (empty exposure in application.properties); expose health here so healthEndpoint_isPublic
 // exercises the endpoint the AIO deployment enables via PICSURE_ACTUATOR_EXPOSURE=health.
-@TestPropertySource(properties = {"hpds.resource.authorized.uuid=", "hpds.resource.open.uuid=",
-    "management.endpoints.web.exposure.include=health"})
+@TestPropertySource(properties = {"management.endpoints.web.exposure.include=health"})
 class VisualizationIntegrationTest {
-
-    private static final String AUTHORIZED_UUID = "550e8400-e29b-41d4-a716-446655440000";
-    private static final String OPEN_UUID = "550e8400-e29b-41d4-a716-446655440001";
 
     @Autowired
     private MockMvc mockMvc;
@@ -46,7 +40,7 @@ class VisualizationIntegrationTest {
 
     @Test
     void distributions_withGatewayIdentity_returnsOk() throws Exception {
-        // Access type comes from the gateway-owned X-User-Id header; no hpdsResourceUUID needed (path-routed frontend omits it).
+        // Access type comes from the gateway-owned X-User-Id header; the request body carries only the query.
         String body = objectMapper.writeValueAsString(Map.of("query", Map.of()));
 
         MvcResult result = mockMvc.perform(
@@ -74,30 +68,18 @@ class VisualizationIntegrationTest {
     }
 
     @Test
-    void distributions_withNoConfiguredUUIDsAndNoBodyUUID_returnsOk() throws Exception {
-        // Production-shape config: AUTH/OPEN_HPDS_RESOURCE_UUID unset and the path-routed frontend sends no body UUID.
-        // resourceUUID is null end-to-end (HPDS ignores the field; audit metadata must tolerate it).
-        String body = objectMapper.writeValueAsString(Map.of("query", Map.of()));
-
-        mockMvc.perform(
-            post("/distributions").contentType(MediaType.APPLICATION_JSON).header("X-User-Id", "test-user").content(body)
-        ).andExpect(status().isOk());
-    }
-
-    @Test
-    void distributions_legacyHpdsResourceUUID_isAcceptedAndIgnoredForAccessSelection() throws Exception {
-        // Legacy clients still send a body UUID; it no longer drives AUTHORIZED-vs-OPEN and unknown values are not rejected.
+    void distributions_legacyHpdsResourceUUID_isIgnored() throws Exception {
+        // hpdsResourceUUID is gone from the request model; a client still sending it must not be rejected.
         String body =
             objectMapper.writeValueAsString(Map.of("hpdsResourceUUID", "550e8400-e29b-41d4-a716-446655440099", "query", Map.of()));
 
-        mockMvc.perform(
-            post("/distributions").contentType(MediaType.APPLICATION_JSON).header("X-User-Id", "test-user").content(body)
-        ).andExpect(status().isOk());
+        mockMvc.perform(post("/distributions").contentType(MediaType.APPLICATION_JSON).header("X-User-Id", "test-user").content(body))
+            .andExpect(status().isOk());
     }
 
     @Test
     void distributions_nullQuery_returns400() throws Exception {
-        String body = "{\"hpdsResourceUUID\":\"" + AUTHORIZED_UUID + "\",\"query\":null}";
+        String body = "{\"query\":null}";
 
         MvcResult result = mockMvc.perform(post("/distributions").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isBadRequest()).andReturn();
@@ -171,9 +153,9 @@ class VisualizationIntegrationTest {
             "550e8400-e29b-41d4-a716-446655440000", "resourceCredentials", Map.of()
         );
 
-        MvcResult result = mockMvc
-            .perform(post("/v3/bin/continuous").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(requestBody)))
-            .andExpect(status().isOk()).andReturn();
+        MvcResult result = mockMvc.perform(
+            post("/v3/bin/continuous").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(requestBody))
+        ).andExpect(status().isOk()).andReturn();
 
         @SuppressWarnings("unchecked")
         Map<String, Map<String, Object>> response = objectMapper.readValue(result.getResponse().getContentAsString(), Map.class);
@@ -198,6 +180,6 @@ class VisualizationIntegrationTest {
 
         String content = result.getResponse().getContentAsString();
         assertTrue(content.contains("POST /distributions"));
-        assertTrue(content.contains("hpdsResourceUUID"));
+        assertFalse(content.contains("hpdsResourceUUID"));
     }
 }

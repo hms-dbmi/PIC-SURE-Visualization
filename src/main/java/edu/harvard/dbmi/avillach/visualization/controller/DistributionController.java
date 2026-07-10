@@ -1,8 +1,8 @@
 package edu.harvard.dbmi.avillach.visualization.controller;
 
 import edu.harvard.dbmi.avillach.visualization.logging.AuditLoggingContext;
+import edu.harvard.dbmi.avillach.visualization.model.AccessType;
 import edu.harvard.dbmi.avillach.visualization.model.DistributionRequest;
-import edu.harvard.dbmi.avillach.visualization.model.HpdsAccessContext;
 import edu.harvard.dbmi.avillach.visualization.model.VisualizationResponse;
 import edu.harvard.dbmi.avillach.visualization.service.HpdsAccessResolver;
 import edu.harvard.dbmi.avillach.visualization.service.VisualizationService;
@@ -30,13 +30,12 @@ public class DistributionController {
         @Valid @RequestBody DistributionRequest request, @RequestHeader(value = "Authorization", required = false) String authorization,
         @RequestHeader(value = "X-User-Id", required = false) String gatewayUserId, HttpServletRequest servletRequest
     ) {
-        HpdsAccessContext accessContext = hpdsAccessResolver.resolve(gatewayUserId, request.hpdsResourceUUID());
+        AccessType accessType = hpdsAccessResolver.resolve(gatewayUserId);
         AuditLoggingContext.addDistributionRequestMetadata(
-            servletRequest, accessContext.resourceUUID(), accessContext.accessType().getValue(), request.query(),
-            visualizationService.subQueryCount(request.query())
+            servletRequest, accessType.getValue(), request.query(), visualizationService.subQueryCount(request.query())
         );
         VisualizationResponse response = visualizationService
-            .generateDistributions(request.query(), accessContext, authorization, AuditLoggingContext.requestId(servletRequest));
+            .generateDistributions(request.query(), accessType, authorization, AuditLoggingContext.requestId(servletRequest));
         AuditLoggingContext.addDistributionResponseMetadata(servletRequest, response);
         return ResponseEntity.ok(response);
     }

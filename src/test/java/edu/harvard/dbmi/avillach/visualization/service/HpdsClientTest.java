@@ -18,7 +18,6 @@ import edu.harvard.hms.dbmi.avillach.hpds.data.query.v3.Query;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,8 +31,6 @@ import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class HpdsClientTest {
-
-    private static final UUID RESOURCE_UUID = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -51,9 +48,8 @@ class HpdsClientTest {
     }
 
     @Test
-    void getAuthCrossCounts_withNullResourceUUID_stillQueriesHpds() throws Exception {
-        // Registry removal: the path-routed frontend sends no resource UUID and none may be configured; HPDS
-        // ignores the body field, so a null UUID must not be rejected client-side.
+    void getAuthCrossCounts_sendsNoResourceUUID() throws Exception {
+        // Registry removal: HPDS is selected by path, so the request body carries no resource UUID.
         Map<String, Map<String, Integer>> expected = new LinkedHashMap<>();
         expected.put("\\test\\", Map.of("a", 1));
 
@@ -63,8 +59,7 @@ class HpdsClientTest {
 
         Query query = new Query(List.of(), List.of(), null, List.of(), null, null, null);
         Map<String, Map<String, Integer>> result = client.getAuthCrossCounts(
-            query, ResultType.CATEGORICAL_CROSS_COUNT, null, "Bearer token", "request-1", AccessType.AUTHORIZED,
-            DistributionType.CATEGORICAL
+            query, ResultType.CATEGORICAL_CROSS_COUNT, "Bearer token", "request-1", AccessType.AUTHORIZED, DistributionType.CATEGORICAL
         );
 
         assertEquals(expected, result);
@@ -78,17 +73,14 @@ class HpdsClientTest {
 
         mockServer.expect(requestTo("http://localhost:9999/mock-hpds/v3/query/sync")).andExpect(method(HttpMethod.POST))
             .andExpect(header("Authorization", "Bearer token")).andExpect(header("X-Request-Id", "request-1"))
-            .andExpect(header("Accept", MediaType.ALL_VALUE))
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().json("{\"resourceUUID\":\"" + RESOURCE_UUID + "\"}"))
+            .andExpect(header("Accept", MediaType.ALL_VALUE)).andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(content().json("{\"query\":{\"expectedResultType\":\"CATEGORICAL_CROSS_COUNT\"}}"))
             .andExpect(content().json("{\"resourceCredentials\":{}}"))
             .andRespond(withSuccess(objectMapper.writeValueAsString(expected), MediaType.APPLICATION_JSON));
 
         Query query = new Query(List.of(), List.of(), null, List.of(), null, null, null);
         Map<String, Map<String, Integer>> result = client.getAuthCrossCounts(
-            query, ResultType.CATEGORICAL_CROSS_COUNT, RESOURCE_UUID, "Bearer token", "request-1", AccessType.AUTHORIZED,
-            DistributionType.CATEGORICAL
+            query, ResultType.CATEGORICAL_CROSS_COUNT, "Bearer token", "request-1", AccessType.AUTHORIZED, DistributionType.CATEGORICAL
         );
 
         assertEquals(expected, result);
@@ -121,8 +113,7 @@ class HpdsClientTest {
 
         Query query = new Query(List.of("\\Nhanes\\demographics\\AGE\\"), List.of(), null, List.of(), null, null, null);
         Map<String, Map<String, Integer>> result = client.getAuthCrossCounts(
-            query, ResultType.CONTINUOUS_CROSS_COUNT, RESOURCE_UUID, "Bearer token", "request-2", AccessType.AUTHORIZED,
-            DistributionType.CONTINUOUS
+            query, ResultType.CONTINUOUS_CROSS_COUNT, "Bearer token", "request-2", AccessType.AUTHORIZED, DistributionType.CONTINUOUS
         );
 
         assertEquals(expected, result);
@@ -143,14 +134,12 @@ class HpdsClientTest {
 
         mockServer.expect(requestTo("http://localhost:9999/mock-hpds/query/sync")).andExpect(method(HttpMethod.POST))
             .andExpect(headerDoesNotExist("Authorization")).andExpect(header("Accept", MediaType.ALL_VALUE))
-            .andExpect(content().json("{\"resourceUUID\":\"" + RESOURCE_UUID + "\"}"))
             .andExpect(content().json("{\"query\":{\"expectedResultType\":\"CATEGORICAL_CROSS_COUNT\"}}"))
             .andExpect(content().json("{\"resourceCredentials\":{}}"))
             .andRespond(withSuccess(objectMapper.writeValueAsString(expected), MediaType.APPLICATION_JSON));
 
         Query query = new Query(List.of(), List.of(), null, List.of(), null, null, null);
-        Map<String, Map<String, ObfuscatedCount>> result =
-            client.getOpenCrossCounts(query, ResultType.CATEGORICAL_CROSS_COUNT, RESOURCE_UUID, null);
+        Map<String, Map<String, ObfuscatedCount>> result = client.getOpenCrossCounts(query, ResultType.CATEGORICAL_CROSS_COUNT, null);
 
         assertEquals(expected, result);
         mockServer.verify();

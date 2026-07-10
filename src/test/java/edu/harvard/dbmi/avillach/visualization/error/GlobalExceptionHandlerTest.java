@@ -71,8 +71,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleVisualizationException_configError_returns500() {
-        VisualizationConfigurationException e =
-            new VisualizationConfigurationException("Authorized HPDS resource UUID (hpds.resource.authorized.uuid) is not configured");
+        VisualizationConfigurationException e = new VisualizationConfigurationException("HPDS base URL (hpds.base-url) is not configured");
 
         ResponseEntity<Map<String, String>> response = handler.handleVisualizationConfigurationException(e);
 

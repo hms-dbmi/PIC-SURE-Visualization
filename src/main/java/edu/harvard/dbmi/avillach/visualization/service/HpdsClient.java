@@ -15,7 +15,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,35 +39,33 @@ public class HpdsClient {
         this.hpdsBaseUrl = hpdsBaseUrl;
     }
 
-    public Map<String, Map<String, Integer>> getAuthCrossCounts(Query query, ResultType resultType, UUID resourceUUID, String bearerToken) {
-        return getAuthCrossCounts(query, resultType, resourceUUID, bearerToken, null, AccessType.AUTHORIZED, null);
+    public Map<String, Map<String, Integer>> getAuthCrossCounts(Query query, ResultType resultType, String bearerToken) {
+        return getAuthCrossCounts(query, resultType, bearerToken, null, AccessType.AUTHORIZED, null);
     }
 
     public Map<String, Map<String, Integer>> getAuthCrossCounts(
-        Query query, ResultType resultType, UUID resourceUUID, String bearerToken, String requestId, AccessType accessType,
-        DistributionType distributionKind
+        Query query, ResultType resultType, String bearerToken, String requestId, AccessType accessType, DistributionType distributionKind
     ) {
         return queryCrossCounts(
-            query, resultType, resourceUUID, bearerToken, requestId, accessType, distributionKind, new ParameterizedTypeReference<>() {}
+            query, resultType, bearerToken, requestId, accessType, distributionKind, new ParameterizedTypeReference<>() {}
         );
     }
 
-    public Map<String, Map<String, ObfuscatedCount>> getOpenCrossCounts(Query query, ResultType resultType, UUID resourceUUID, String bearerToken) {
-        return getOpenCrossCounts(query, resultType, resourceUUID, bearerToken, null, AccessType.OPEN, null);
+    public Map<String, Map<String, ObfuscatedCount>> getOpenCrossCounts(Query query, ResultType resultType, String bearerToken) {
+        return getOpenCrossCounts(query, resultType, bearerToken, null, AccessType.OPEN, null);
     }
 
     public Map<String, Map<String, ObfuscatedCount>> getOpenCrossCounts(
-        Query query, ResultType resultType, UUID resourceUUID, String bearerToken, String requestId, AccessType accessType,
-        DistributionType distributionKind
+        Query query, ResultType resultType, String bearerToken, String requestId, AccessType accessType, DistributionType distributionKind
     ) {
         return queryCrossCounts(
-            query, resultType, resourceUUID, bearerToken, requestId, accessType, distributionKind, new ParameterizedTypeReference<>() {}
+            query, resultType, bearerToken, requestId, accessType, distributionKind, new ParameterizedTypeReference<>() {}
         );
     }
 
     private <T> Map<String, T> queryCrossCounts(
-        Query query, ResultType resultType, UUID resourceUUID, String bearerToken, String requestId, AccessType accessType,
-        DistributionType distributionKind, ParameterizedTypeReference<Map<String, T>> typeRef
+        Query query, ResultType resultType, String bearerToken, String requestId, AccessType accessType, DistributionType distributionKind,
+        ParameterizedTypeReference<Map<String, T>> typeRef
     ) {
         long startTime = System.currentTimeMillis();
 
@@ -88,11 +85,11 @@ public class HpdsClient {
         }
 
         String url = hpdsBaseUrl + querySyncPath(accessType);
-        Object body = requestBody(subQuery, resourceUUID);
+        Object body = requestBody(subQuery);
         logger.info(
-            "Calling HPDS requestId={} accessType={} distributionKind={} resultType={} resourceUUID={} selectedConceptCount={} selectedConceptPaths={} url={}",
-            requestId, accessTypeValue(accessType), distributionKindValue(distributionKind), resultType, resourceUUID,
-            selectedConceptCount(subQuery), selectedConceptPaths(subQuery), url
+            "Calling HPDS requestId={} accessType={} distributionKind={} resultType={} selectedConceptCount={} selectedConceptPaths={} url={}",
+            requestId, accessTypeValue(accessType), distributionKindValue(distributionKind), resultType, selectedConceptCount(subQuery),
+            selectedConceptPaths(subQuery), url
         );
 
         try {
@@ -104,19 +101,19 @@ public class HpdsClient {
                 responsePointCount(response.getBody()), responseSeriesKeys(response.getBody())
             );
             sendHpdsEvent(
-                subQuery, resultType, resourceUUID, requestId, bearerToken, accessType, distributionKind, url,
-                response.getStatusCode().value(), System.currentTimeMillis() - startTime, response.getBody(), null
+                subQuery, resultType, requestId, bearerToken, accessType, distributionKind, url, response.getStatusCode().value(),
+                System.currentTimeMillis() - startTime, response.getBody(), null
             );
             return response.getBody() != null ? response.getBody() : new LinkedHashMap<>();
         } catch (RuntimeException e) {
             Integer status = e instanceof HttpStatusCodeException httpError ? httpError.getStatusCode().value() : null;
             logger.warn(
-                "HPDS call failed requestId={} accessType={} distributionKind={} resultType={} status={} durationMs={} error={}",
-                requestId, accessTypeValue(accessType), distributionKindValue(distributionKind), resultType, status,
+                "HPDS call failed requestId={} accessType={} distributionKind={} resultType={} status={} durationMs={} error={}", requestId,
+                accessTypeValue(accessType), distributionKindValue(distributionKind), resultType, status,
                 System.currentTimeMillis() - startTime, e.getMessage()
             );
             sendHpdsEvent(
-                subQuery, resultType, resourceUUID, requestId, bearerToken, accessType, distributionKind, url, null,
+                subQuery, resultType, requestId, bearerToken, accessType, distributionKind, url, null,
                 System.currentTimeMillis() - startTime, null, e
             );
             throw e;
@@ -147,9 +144,8 @@ public class HpdsClient {
         return responseBody != null ? new ArrayList<>(responseBody.keySet()) : List.of();
     }
 
-    private Object requestBody(Query subQuery, UUID resourceUUID) {
+    private Object requestBody(Query subQuery) {
         GeneralQueryRequest request = new GeneralQueryRequest();
-        request.setResourceUUID(resourceUUID);
         request.setQuery(subQuery);
         request.setResourceCredentials(Map.of());
         return request;
@@ -160,8 +156,8 @@ public class HpdsClient {
     }
 
     private void sendHpdsEvent(
-        Query query, ResultType resultType, UUID resourceUUID, String requestId, String bearerToken, AccessType accessType,
-        DistributionType distributionKind, String url, Integer status, long duration, Map<String, ?> responseBody, RuntimeException error
+        Query query, ResultType resultType, String requestId, String bearerToken, AccessType accessType, DistributionType distributionKind,
+        String url, Integer status, long duration, Map<String, ?> responseBody, RuntimeException error
     ) {
         try {
             Integer resolvedStatus = status;
@@ -172,7 +168,7 @@ public class HpdsClient {
                 .request(
                     RequestInfo.builder().requestId(requestId).method("POST").url("/v3/query/sync").destIp(destinationHost(url))
                         .destPort(destinationPort(url)).status(resolvedStatus).duration(duration).build()
-                ).metadata(hpdsMetadata(query, resultType, resourceUUID, accessType, distributionKind, responseBody));
+                ).metadata(hpdsMetadata(query, resultType, accessType, distributionKind, responseBody));
             if (error != null) {
                 builder.error(errorMetadata(error, resolvedStatus));
             }
@@ -183,11 +179,9 @@ public class HpdsClient {
     }
 
     private static Map<String, Object> hpdsMetadata(
-        Query query, ResultType resultType, UUID resourceUUID, AccessType accessType, DistributionType distributionKind,
-        Map<String, ?> responseBody
+        Query query, ResultType resultType, AccessType accessType, DistributionType distributionKind, Map<String, ?> responseBody
     ) {
         Map<String, Object> metadata = new LinkedHashMap<>();
-        metadata.put("resource_uuid", resourceUUID.toString());
         metadata.put("result_type", resultType.toString());
         List<String> selectedConceptPaths = query.select() != null ? query.select() : List.of();
         metadata.put("selected_concept_paths", selectedConceptPaths);
