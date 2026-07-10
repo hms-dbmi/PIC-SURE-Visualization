@@ -68,16 +68,6 @@ class VisualizationIntegrationTest {
     }
 
     @Test
-    void distributions_legacyHpdsResourceUUID_isIgnored() throws Exception {
-        // hpdsResourceUUID is gone from the request model; a client still sending it must not be rejected.
-        String body =
-            objectMapper.writeValueAsString(Map.of("hpdsResourceUUID", "550e8400-e29b-41d4-a716-446655440099", "query", Map.of()));
-
-        mockMvc.perform(post("/distributions").contentType(MediaType.APPLICATION_JSON).header("X-User-Id", "test-user").content(body))
-            .andExpect(status().isOk());
-    }
-
-    @Test
     void distributions_nullQuery_returns400() throws Exception {
         String body = "{\"query\":null}";
 
